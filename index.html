@@ -1,0 +1,620 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Petualangan Ekosistem: Biotik & Abiotik</title>
+    <!-- Tailwind CSS untuk Styling Cepat -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome untuk Ikon -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Tone.js untuk Audio -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.js"></script>
+    
+    <style>
+        /* Tema Warna Hutan & Kustomisasi */
+        :root {
+            --forest-dark: #2d4a22;
+            --forest-light: #4a7c39;
+            --dirt: #8b5a2b;
+            --dirt-light: #a06e3d;
+        }
+
+        body {
+            background-color: var(--forest-dark);
+            color: white;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            overflow: hidden; /* Mencegah scroll, menjaga layout tetap di satu layar */
+            user-select: none;
+        }
+
+        .bg-forest {
+            background: linear-gradient(to bottom, #4a7c39 0%, #2d4a22 100%);
+        }
+
+        .track {
+            background: var(--dirt);
+            border: 4px dashed var(--dirt-light);
+            border-radius: 50px;
+            position: relative;
+        }
+
+        /* Animasi Karakter */
+        .character {
+            transition: transform 0.5s cubic-bezier(0.25, 1, 0.5, 1);
+            filter: drop-shadow(2px 4px 6px rgba(0,0,0,0.5));
+        }
+
+        .walking {
+            animation: walk-bob 0.5s infinite alternate;
+        }
+
+        @keyframes walk-bob {
+            0% { transform: translateY(0); }
+            100% { transform: translateY(-10px); }
+        }
+
+        /* Animasi Feedback Salah */
+        .shake {
+            animation: shake 0.4s cubic-bezier(.36,.07,.19,.97) both;
+        }
+
+        @keyframes shake {
+            10%, 90% { transform: translate3d(-2px, 0, 0); }
+            20%, 80% { transform: translate3d(4px, 0, 0); }
+            30%, 50%, 70% { transform: translate3d(-6px, 0, 0); }
+            40%, 60% { transform: translate3d(6px, 0, 0); }
+        }
+
+        .pulse-red {
+            animation: pulse-red 0.5s ease-out;
+        }
+
+        @keyframes pulse-red {
+            0% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7); background-color: #ef4444; }
+            70% { box-shadow: 0 0 0 20px rgba(239, 68, 68, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
+        }
+
+        /* Animasi Feedback Benar (+10 Floating) */
+        .float-up {
+            position: absolute;
+            color: #4ade80;
+            font-weight: bold;
+            font-size: 2rem;
+            animation: floatUpAnim 1s ease-out forwards;
+            pointer-events: none;
+            z-index: 50;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.8);
+        }
+
+        @keyframes floatUpAnim {
+            0% { opacity: 1; transform: translateY(0) scale(1); }
+            100% { opacity: 0; transform: translateY(-60px) scale(1.5); }
+        }
+
+        /* Gaya Tombol */
+        .btn-game {
+            transition: all 0.2s;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+        }
+        .btn-game:active {
+            transform: translateY(4px);
+            box-shadow: 0 0px 0px rgba(0,0,0,0.3);
+        }
+        
+        /* Dekorasi Hutan Sederhana */
+        .tree-bg {
+            position: absolute;
+            color: rgba(0,0,0,0.15);
+            z-index: 0;
+            pointer-events: none;
+        }
+
+        /* Scramble text monospace agar rapi */
+        .scramble-text {
+            font-family: monospace;
+            min-height: 2em;
+        }
+    </style>
+</head>
+<body class="h-screen w-screen flex items-center justify-center relative">
+
+    <!-- Efek Getar akan ditambahkan ke container ini -->
+    <div id="game-container" class="w-full h-full relative flex flex-col">
+        
+        <!-- Background Dekorasi -->
+        <i class="fa-solid fa-tree tree-bg text-9xl top-10 left-10"></i>
+        <i class="fa-solid fa-tree tree-bg text-8xl bottom-20 right-10"></i>
+        <i class="fa-solid fa-leaf tree-bg text-6xl top-1/2 left-1/2 opacity-10"></i>
+
+        <!-- ================= SCREEN 1: LOGIN ================= -->
+        <div id="screen-login" class="absolute inset-0 z-20 flex items-center justify-center bg-forest">
+            <div class="bg-white/10 backdrop-blur-md p-8 rounded-2xl shadow-2xl border border-white/20 w-96 max-w-full text-center">
+                <i class="fa-solid fa-campground text-6xl text-green-400 mb-4"></i>
+                <h1 class="text-3xl font-bold mb-6 text-white text-shadow">Penjelajah Ekosistem</h1>
+                
+                <div class="space-y-4 text-left">
+                    <div>
+                        <label class="block text-sm font-semibold mb-1 text-green-100">Nama Pemain 1 (Kiri)</label>
+                        <input type="text" id="input-p1" class="w-full px-4 py-2 rounded-lg bg-white/20 border border-green-300 text-white placeholder-green-200/50 focus:outline-none focus:ring-2 focus:ring-green-400" placeholder="Misal: Budi">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-semibold mb-1 text-green-100">Nama Pemain 2 (Kanan)</label>
+                        <input type="text" id="input-p2" class="w-full px-4 py-2 rounded-lg bg-white/20 border border-green-300 text-white placeholder-green-200/50 focus:outline-none focus:ring-2 focus:ring-green-400" placeholder="Misal: Siti">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-semibold mb-1 text-green-100">Asal Sekolah</label>
+                        <input type="text" id="input-school" class="w-full px-4 py-2 rounded-lg bg-white/20 border border-green-300 text-white placeholder-green-200/50 focus:outline-none focus:ring-2 focus:ring-green-400" placeholder="Misal: SDN 1 Nusantara">
+                    </div>
+                </div>
+
+                <button id="btn-start-login" disabled class="mt-8 w-full py-3 rounded-xl bg-gray-500 text-gray-300 font-bold cursor-not-allowed transition-colors text-lg">
+                    Isi Data Dulu
+                </button>
+            </div>
+        </div>
+
+        <!-- ================= SCREEN 2: PILIH LEVEL ================= -->
+        <div id="screen-level" class="absolute inset-0 z-10 hidden items-center justify-center bg-forest flex-col">
+            <h1 class="text-4xl font-bold mb-8 text-white drop-shadow-md">Pilih Area Penjelajahan</h1>
+            <div class="flex gap-6">
+                <button onclick="startGame(1)" class="btn-game bg-green-500 hover:bg-green-400 text-white py-6 px-10 rounded-2xl text-2xl font-bold border-b-4 border-green-700 flex flex-col items-center">
+                    <i class="fa-solid fa-leaf mb-2 text-4xl"></i> Level 1<span class="text-sm font-normal mt-1">Mudah</span>
+                </button>
+                <button onclick="startGame(2)" class="btn-game bg-yellow-500 hover:bg-yellow-400 text-white py-6 px-10 rounded-2xl text-2xl font-bold border-b-4 border-yellow-700 flex flex-col items-center">
+                    <i class="fa-solid fa-tree mb-2 text-4xl"></i> Level 2<span class="text-sm font-normal mt-1">Sedang</span>
+                </button>
+                <button onclick="startGame(3)" class="btn-game bg-red-500 hover:bg-red-400 text-white py-6 px-10 rounded-2xl text-2xl font-bold border-b-4 border-red-700 flex flex-col items-center">
+                    <i class="fa-solid fa-mountain mb-2 text-4xl"></i> Level 3<span class="text-sm font-normal mt-1">Sulit</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- ================= SCREEN 3: GAMEPLAY ================= -->
+        <div id="screen-game" class="absolute inset-0 z-0 hidden flex bg-forest">
+            
+            <!-- Player 1 (Kiri) -->
+            <div class="w-1/2 h-full border-r-4 border-black/30 flex flex-col relative p-4 bg-gradient-to-br from-transparent to-black/20">
+                <!-- Header Status -->
+                <div class="flex justify-between items-center bg-black/40 p-3 rounded-xl mb-4">
+                    <h2 id="name-p1" class="text-2xl font-bold text-yellow-300">P1</h2>
+                    <div class="text-xl font-bold bg-white/20 px-4 py-1 rounded-full"><i class="fa-solid fa-star text-yellow-400"></i> <span id="score-p1">0</span></div>
+                </div>
+
+                <!-- Trek Karakter -->
+                <div class="track h-24 mb-6 flex items-center px-4 overflow-hidden shadow-inner">
+                    <div class="w-full relative h-full flex items-center">
+                        <i id="char-p1" class="fa-solid fa-person-hiking text-5xl text-blue-300 character absolute left-0" style="transform: translateX(0%);"></i>
+                        <div id="float-container-p1" class="absolute h-full w-full pointer-events-none"></div>
+                    </div>
+                </div>
+
+                <!-- Area Pertanyaan -->
+                <div class="flex-grow flex flex-col items-center justify-center bg-white/10 rounded-2xl border-2 border-white/20 p-6 mb-4 relative">
+                    <i id="icon-p1" class="fa-solid fa-question text-8xl mb-6 text-white drop-shadow-lg"></i>
+                    <h3 id="question-p1" class="text-4xl font-bold text-center scramble-text drop-shadow-md">Bersiap...</h3>
+                    <div id="feedback-icon-p1" class="absolute inset-0 flex items-center justify-center opacity-0 transition-opacity pointer-events-none">
+                        <i class="fa-solid fa-check-circle text-9xl text-green-400 drop-shadow-2xl"></i>
+                    </div>
+                </div>
+
+                <!-- Tombol Kontrol (Selalu di bawah) -->
+                <div class="flex gap-4 mt-auto">
+                    <button id="btn-biotik-p1" onclick="checkAnswer('p1', 'Biotik')" class="btn-game flex-1 bg-green-600 hover:bg-green-500 py-6 rounded-2xl text-2xl font-bold border-b-8 border-green-800 shadow-xl flex flex-col items-center justify-center">
+                        <i class="fa-solid fa-seedling mb-2"></i> BIOTIK
+                    </button>
+                    <button id="btn-abiotik-p1" onclick="checkAnswer('p1', 'Abiotik')" class="btn-game flex-1 bg-amber-600 hover:bg-amber-500 py-6 rounded-2xl text-2xl font-bold border-b-8 border-amber-800 shadow-xl flex flex-col items-center justify-center">
+                        <i class="fa-solid fa-gem mb-2"></i> ABIOTIK
+                    </button>
+                </div>
+            </div>
+
+            <!-- Player 2 (Kanan) -->
+            <div class="w-1/2 h-full flex flex-col relative p-4 bg-gradient-to-bl from-transparent to-black/20">
+                <!-- Header Status -->
+                <div class="flex justify-between items-center bg-black/40 p-3 rounded-xl mb-4">
+                    <div class="text-xl font-bold bg-white/20 px-4 py-1 rounded-full"><i class="fa-solid fa-star text-yellow-400"></i> <span id="score-p2">0</span></div>
+                    <h2 id="name-p2" class="text-2xl font-bold text-pink-300">P2</h2>
+                </div>
+
+                <!-- Trek Karakter -->
+                <div class="track h-24 mb-6 flex items-center px-4 overflow-hidden shadow-inner">
+                    <div class="w-full relative h-full flex items-center">
+                        <i id="char-p2" class="fa-solid fa-person-dress-hiking text-5xl text-pink-300 character absolute left-0" style="transform: translateX(0%);"></i>
+                        <div id="float-container-p2" class="absolute h-full w-full pointer-events-none"></div>
+                    </div>
+                </div>
+
+                <!-- Area Pertanyaan -->
+                <div class="flex-grow flex flex-col items-center justify-center bg-white/10 rounded-2xl border-2 border-white/20 p-6 mb-4 relative">
+                    <i id="icon-p2" class="fa-solid fa-question text-8xl mb-6 text-white drop-shadow-lg"></i>
+                    <h3 id="question-p2" class="text-4xl font-bold text-center scramble-text drop-shadow-md">Bersiap...</h3>
+                    <div id="feedback-icon-p2" class="absolute inset-0 flex items-center justify-center opacity-0 transition-opacity pointer-events-none">
+                        <i class="fa-solid fa-check-circle text-9xl text-green-400 drop-shadow-2xl"></i>
+                    </div>
+                </div>
+
+                <!-- Tombol Kontrol (Selalu di bawah) -->
+                <div class="flex gap-4 mt-auto">
+                    <button id="btn-biotik-p2" onclick="checkAnswer('p2', 'Biotik')" class="btn-game flex-1 bg-green-600 hover:bg-green-500 py-6 rounded-2xl text-2xl font-bold border-b-8 border-green-800 shadow-xl flex flex-col items-center justify-center">
+                        <i class="fa-solid fa-seedling mb-2"></i> BIOTIK
+                    </button>
+                    <button id="btn-abiotik-p2" onclick="checkAnswer('p2', 'Abiotik')" class="btn-game flex-1 bg-amber-600 hover:bg-amber-500 py-6 rounded-2xl text-2xl font-bold border-b-8 border-amber-800 shadow-xl flex flex-col items-center justify-center">
+                        <i class="fa-solid fa-gem mb-2"></i> ABIOTIK
+                    </button>
+                </div>
+            </div>
+            
+        </div>
+
+        <!-- ================= SCREEN 4: HASIL ================= -->
+        <div id="screen-result" class="absolute inset-0 z-30 hidden items-center justify-center bg-black/80 flex-col backdrop-blur-sm">
+            <div class="bg-forest p-10 rounded-3xl text-center border-4 border-yellow-400 shadow-[0_0_50px_rgba(250,204,21,0.4)]">
+                <i class="fa-solid fa-trophy text-7xl text-yellow-400 mb-4 animate-bounce"></i>
+                <h1 class="text-5xl font-bold mb-2 text-white">Permainan Selesai!</h1>
+                <h2 id="winner-text" class="text-3xl font-bold text-yellow-300 mb-8">Pemenang: ...</h2>
+                
+                <div class="flex justify-center gap-10 mb-10 text-xl">
+                    <div class="bg-black/30 p-4 rounded-xl">
+                        <div id="result-name-p1" class="font-bold text-blue-300">P1</div>
+                        <div id="result-score-p1" class="text-3xl font-bold">0</div>
+                    </div>
+                    <div class="bg-black/30 p-4 rounded-xl">
+                        <div id="result-name-p2" class="font-bold text-pink-300">P2</div>
+                        <div id="result-score-p2" class="text-3xl font-bold">0</div>
+                    </div>
+                </div>
+
+                <div class="flex gap-4 justify-center">
+                    <button onclick="showScreen('level')" class="btn-game bg-blue-500 hover:bg-blue-400 text-white py-3 px-6 rounded-xl font-bold border-b-4 border-blue-700">
+                        <i class="fa-solid fa-rotate-right mr-2"></i> Main Lagi
+                    </button>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Script Logika Permainan -->
+    <script>
+        // --- KONFIGURASI ---
+        const WIN_SCORE = 100; // Skor untuk menang (10 soal benar)
+        const SCORE_INCREMENT = 10;
+        
+        // URL Web App Google Apps Script Anda masukkan di sini
+        // Pastikan Apps Script Anda menerima POST request (doPost) atau GET (doGet) dan mengembalikan respons yang sesuai.
+        const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/YOUR_SCRIPT_ID/exec'; 
+
+        // --- DATA BANK (50 Item) ---
+        const dataBank = [
+            // BIOTIK (25)
+            { name: "Pohon", type: "Biotik", icon: "fa-tree" }, { name: "Rumput", type: "Biotik", icon: "fa-leaf" },
+            { name: "Burung", type: "Biotik", icon: "fa-crow" }, { name: "Kucing", type: "Biotik", icon: "fa-cat" },
+            { name: "Cacing", type: "Biotik", icon: "fa-worm" }, { name: "Semut", type: "Biotik", icon: "fa-bug" },
+            { name: "Bunga", type: "Biotik", icon: "fa-seedling" }, { name: "Jamur", type: "Biotik", icon: "fa-disease" }, // disease icon looks a bit like spores/mushroom in free fontawesome
+            { name: "Ikan", type: "Biotik", icon: "fa-fish" }, { name: "Katak", type: "Biotik", icon: "fa-frog" },
+            { name: "Harimau", type: "Biotik", icon: "fa-cat" }, { name: "Ular", type: "Biotik", icon: "fa-staff-snake" },
+            { name: "Kupu-kupu", type: "Biotik", icon: "fa-bug" }, { name: "Lebah", type: "Biotik", icon: "fa-bug" },
+            { name: "Manusia", type: "Biotik", icon: "fa-person" }, { name: "Sapi", type: "Biotik", icon: "fa-cow" },
+            { name: "Kambing", type: "Biotik", icon: "fa-horse" }, { name: "Ayam", type: "Biotik", icon: "fa-kiwi-bird" },
+            { name: "Bakteri", type: "Biotik", icon: "fa-bacterium" }, { name: "Lumut", type: "Biotik", icon: "fa-leaf" },
+            { name: "Alga", type: "Biotik", icon: "fa-leaf" }, { name: "Buaya", type: "Biotik", icon: "fa-dragon" },
+            { name: "Kura-kura", type: "Biotik", icon: "fa-turtle" }, { name: "Siput", type: "Biotik", icon: "fa-bug" },
+            { name: "Laba-laba", type: "Biotik", icon: "fa-spider" },
+            
+            // ABIOTIK (25)
+            { name: "Batu", type: "Abiotik", icon: "fa-gem" }, { name: "Air", type: "Abiotik", icon: "fa-water" },
+            { name: "Udara", type: "Abiotik", icon: "fa-wind" }, { name: "Tanah", type: "Abiotik", icon: "fa-mound" },
+            { name: "Cahaya Matahari", type: "Abiotik", icon: "fa-sun" }, { name: "Suhu", type: "Abiotik", icon: "fa-temperature-half" },
+            { name: "Angin", type: "Abiotik", icon: "fa-wind" }, { name: "Pasir", type: "Abiotik", icon: "fa-mound" },
+            { name: "Awan", type: "Abiotik", icon: "fa-cloud" }, { name: "Hujan", type: "Abiotik", icon: "fa-cloud-rain" },
+            { name: "Salju", type: "Abiotik", icon: "fa-snowflake" }, { name: "Api", type: "Abiotik", icon: "fa-fire" },
+            { name: "Gunung", type: "Abiotik", icon: "fa-mountain" }, { name: "Lembah", type: "Abiotik", icon: "fa-mountain-sun" },
+            { name: "Danau", type: "Abiotik", icon: "fa-water" }, { name: "Sungai", type: "Abiotik", icon: "fa-water" },
+            { name: "Emas", type: "Abiotik", icon: "fa-coins" }, { name: "Besi", type: "Abiotik", icon: "fa-dumbbell" },
+            { name: "Garam", type: "Abiotik", icon: "fa-cubes" }, { name: "Mineral", type: "Abiotik", icon: "fa-gem" },
+            { name: "Plastik", type: "Abiotik", icon: "fa-bottle-water" }, { name: "Kaca", type: "Abiotik", icon: "fa-wine-glass" },
+            { name: "Aspal", type: "Abiotik", icon: "fa-road" }, { name: "Karbon Dioksida", type: "Abiotik", icon: "fa-cloud" },
+            { name: "Oksigen", type: "Abiotik", icon: "fa-wind" }
+        ];
+
+        // --- STATE PERMAINAN ---
+        let state = {
+            school: "", level: 1, startTime: null, isPlaying: false,
+            p1: { name: "", score: 0, currentQ: null, progress: 0 },
+            p2: { name: "", score: 0, currentQ: null, progress: 0 }
+        };
+
+        // --- AUDIO (Tone.js) ---
+        let synthCorrect, synthWrong;
+        let audioInitialized = false;
+
+        function initAudio() {
+            if (audioInitialized) return;
+            // Synthesizer untuk suara benar (Beep ceria)
+            synthCorrect = new Tone.PolySynth(Tone.Synth, {
+                oscillator: { type: "sine" },
+                envelope: { attack: 0.01, decay: 0.1, sustain: 0.1, release: 1 }
+            }).toDestination();
+            synthCorrect.volume.value = -10;
+
+            // Synthesizer untuk suara salah (Buzzer rendah)
+            synthWrong = new Tone.Synth({
+                oscillator: { type: "sawtooth" },
+                envelope: { attack: 0.05, decay: 0.2, sustain: 0.2, release: 0.5 }
+            }).toDestination();
+            synthWrong.volume.value = -15;
+
+            audioInitialized = true;
+        }
+
+        function playSound(type) {
+            if (!audioInitialized) return;
+            if (type === 'correct') {
+                synthCorrect.triggerAttackRelease(["C5", "E5", "G5"], "16n");
+            } else {
+                synthWrong.triggerAttackRelease("C2", "8n");
+            }
+        }
+
+        // --- LOGIKA UI & NAVIGASI ---
+        const inputs = [document.getElementById('input-p1'), document.getElementById('input-p2'), document.getElementById('input-school')];
+        const btnStartLogin = document.getElementById('btn-start-login');
+
+        // Validasi input form login
+        inputs.forEach(input => {
+            input.addEventListener('input', () => {
+                const allFilled = inputs.every(i => i.value.trim() !== "");
+                if (allFilled) {
+                    btnStartLogin.disabled = false;
+                    btnStartLogin.classList.remove('bg-gray-500', 'text-gray-300', 'cursor-not-allowed');
+                    btnStartLogin.classList.add('bg-green-500', 'text-white', 'hover:bg-green-600');
+                } else {
+                    btnStartLogin.disabled = true;
+                    btnStartLogin.classList.add('bg-gray-500', 'text-gray-300', 'cursor-not-allowed');
+                    btnStartLogin.classList.remove('bg-green-500', 'text-white', 'hover:bg-green-600');
+                }
+            });
+        });
+
+        btnStartLogin.addEventListener('click', async () => {
+            await Tone.start(); // Memulai audio context (Syarat browser)
+            initAudio();
+            state.p1.name = document.getElementById('input-p1').value.trim();
+            state.p2.name = document.getElementById('input-p2').value.trim();
+            state.school = document.getElementById('input-school').value.trim();
+            
+            document.getElementById('name-p1').innerText = state.p1.name;
+            document.getElementById('name-p2').innerText = state.p2.name;
+            
+            showScreen('level');
+        });
+
+        function showScreen(screenId) {
+            ['login', 'level', 'game', 'result'].forEach(id => {
+                document.getElementById(`screen-${id}`).classList.add('hidden');
+            });
+            document.getElementById(`screen-${screenId}`).classList.remove('hidden');
+        }
+
+        // --- LOGIKA GAMEPLAY ---
+        function startGame(level) {
+            state.level = level;
+            state.startTime = new Date();
+            state.isPlaying = true;
+            
+            // Reset state pemain
+            ['p1', 'p2'].forEach(p => {
+                state[p].score = 0;
+                state[p].progress = 0;
+                updateUI(p);
+                setNewQuestion(p);
+            });
+
+            showScreen('game');
+        }
+
+        function getRandomQuestion() {
+            return dataBank[Math.floor(Math.random() * dataBank.length)];
+        }
+
+        function setNewQuestion(player) {
+            const q = getRandomQuestion();
+            state[player].currentQ = q;
+            
+            const iconEl = document.getElementById(`icon-${player}`);
+            const textEl = document.getElementById(`question-${player}`);
+            
+            // Ganti icon (hapus class fa-* sebelumnya, tambah yang baru)
+            iconEl.className = `fa-solid ${q.icon} text-8xl mb-6 text-white drop-shadow-lg`;
+            textEl.innerText = q.name;
+            textEl.style.opacity = 1; // Pastikan terlihat jika setelah efek salah
+        }
+
+        function checkAnswer(player, selectedType) {
+            if (!state.isPlaying) return;
+
+            const q = state[player].currentQ;
+            const btnId = `btn-${selectedType.toLowerCase()}-${player}`;
+            const btnEl = document.getElementById(btnId);
+
+            if (selectedType === q.type) {
+                // BENAR
+                playSound('correct');
+                state[player].score += SCORE_INCREMENT;
+                // Maju: hitung persentase posisi berdasarkan skor. (Maks 85% agar tidak keluar layar)
+                state[player].progress = Math.min(85, (state[player].score / WIN_SCORE) * 85);
+                
+                showFeedbackBenar(player);
+                updateUI(player);
+                checkWin(player);
+
+                if(state.isPlaying) {
+                    setTimeout(() => setNewQuestion(player), 300); // Jeda sedikit sebelum ganti soal
+                }
+            } else {
+                // SALAH
+                playSound('wrong');
+                // Mundur sedikit jika skor > 0
+                if(state[player].score > 0) {
+                    state[player].score = Math.max(0, state[player].score - (SCORE_INCREMENT/2)); // Penalti setengah
+                    state[player].progress = Math.max(0, (state[player].score / WIN_SCORE) * 85);
+                    updateUI(player);
+                }
+                showFeedbackSalah(player, btnEl);
+            }
+        }
+
+        function updateUI(player) {
+            document.getElementById(`score-${player}`).innerText = state[player].score;
+            document.getElementById(`char-${player}`).style.transform = `translateX(${state[player].progress}vw)`; // Menggunakan vw relatif ke track
+        }
+
+        // --- EFEK VISUAL ---
+        function showFeedbackBenar(player) {
+            // 1. Munculkan Ceklis Hijau
+            const feedbackIcon = document.getElementById(`feedback-icon-${player}`);
+            feedbackIcon.style.opacity = '1';
+            setTimeout(() => { feedbackIcon.style.opacity = '0'; }, 500);
+
+            // 2. Animasi Floating +10 di atas karakter
+            const container = document.getElementById(`float-container-${player}`);
+            const char = document.getElementById(`char-${player}`);
+            
+            const floatEl = document.createElement('div');
+            floatEl.innerText = `+${SCORE_INCREMENT}`;
+            floatEl.className = 'float-up';
+            // Posisi dihitung relatif terhadap posisi karakter saat ini
+            floatEl.style.left = `${state[player].progress}vw`;
+            floatEl.style.top = '-20px';
+            
+            container.appendChild(floatEl);
+            
+            // Hapus elemen setelah animasi selesai
+            setTimeout(() => {
+                if(container.contains(floatEl)) container.removeChild(floatEl);
+            }, 1000);
+        }
+
+        function showFeedbackSalah(player, buttonEl) {
+            // 1. Tombol Denyut Merah
+            buttonEl.classList.add('pulse-red');
+            setTimeout(() => buttonEl.classList.remove('pulse-red'), 500);
+
+            // 2. Layar Bergetar (Keseluruhan kontainer game)
+            const gameContainer = document.getElementById('game-container');
+            gameContainer.classList.add('shake');
+            setTimeout(() => gameContainer.classList.remove('shake'), 400);
+
+            // 3. Teks Beracak (Scramble)
+            const textEl = document.getElementById(`question-${player}`);
+            const originalText = state[player].currentQ.name;
+            const chars = '!@#$%^&*()_+-=[]{}|;:,.<>?';
+            
+            let iterations = 0;
+            const interval = setInterval(() => {
+                textEl.innerText = originalText.split('').map((char, index) => {
+                    if(char === ' ') return ' ';
+                    if(index < iterations) return originalText[index];
+                    return chars[Math.floor(Math.random() * chars.length)];
+                }).join('');
+                iterations += 1/3;
+                
+                if(iterations >= originalText.length) {
+                    clearInterval(interval);
+                    textEl.innerText = originalText;
+                }
+            }, 30);
+
+            // Garansi kembali ke teks asli setelah 700ms
+            setTimeout(() => {
+                clearInterval(interval);
+                textEl.innerText = originalText;
+            }, 700);
+        }
+
+        // --- PENYELESAIAN GAME & PENGIRIMAN DATA ---
+        function checkWin(player) {
+            if (state[player].score >= WIN_SCORE) {
+                state.isPlaying = false;
+                const endTime = new Date();
+                const duration = Math.round((endTime - state.startTime) / 1000); // dalam detik
+
+                // Tampilkan Hasil
+                document.getElementById('winner-text').innerText = `Pemenang: ${state[player].name}!`;
+                document.getElementById('result-name-p1').innerText = state.p1.name;
+                document.getElementById('result-score-p1').innerText = state.p1.score;
+                document.getElementById('result-name-p2').innerText = state.p2.name;
+                document.getElementById('result-score-p2').innerText = state.p2.score;
+                
+                showScreen('result');
+
+                // Kirim Data ke Database (Google Sheets)
+                sendDataToSpreadsheet(player, duration);
+            }
+        }
+
+        function sendDataToSpreadsheet(winner, duration) {
+            // Data sesuai format: Timestamp, Nama, Sekolah, Jenis Permainan, Level, Status, dan Waktu.
+            const timestamp = new Date().toLocaleString('id-ID');
+            const gameType = "Biotik vs Abiotik";
+            
+            // Kita kirim data untuk kedua pemain
+            const dataP1 = {
+                timestamp: timestamp,
+                nama: state.p1.name,
+                sekolah: state.school,
+                permainan: gameType,
+                level: state.level,
+                status: winner === 'p1' ? 'Menang' : 'Kalah',
+                skor: state.p1.score,
+                waktu_detik: duration
+            };
+
+            const dataP2 = {
+                timestamp: timestamp,
+                nama: state.p2.name,
+                sekolah: state.school,
+                permainan: gameType,
+                level: state.level,
+                status: winner === 'p2' ? 'Menang' : 'Kalah',
+                skor: state.p2.score,
+                waktu_detik: duration
+            };
+
+            // Opsional: Implementasi pengiriman data
+            // Karena ini adalah contoh mandiri tanpa backend beneran, fungsi fetch menggunakan no-cors
+            // agar tidak diblokir browser saat mencoba mengirim ke App Script yang belum dikonfigurasi CORS-nya.
+            console.log("Mengirim data ke Google Sheets:", dataP1, dataP2);
+
+            try {
+                // Contoh POST request (sesuaikan struktur parameter dengan penanganan doPost di Google Apps Script Anda)
+                // Menggunakan URLSearchParams untuk format application/x-www-form-urlencoded
+                
+                const sendReq = (data) => {
+                    const formData = new URLSearchParams();
+                    Object.keys(data).forEach(key => formData.append(key, data[key]));
+                    
+                    fetch(GOOGLE_SCRIPT_URL, {
+                        method: 'POST',
+                        mode: 'no-cors', // Penting untuk bypass CORS policy pada web app google script standar
+                        headers: {
+                            'Content-Type': 'application/x-www-form-urlencoded',
+                        },
+                        body: formData.toString()
+                    }).catch(e => console.log("Fetch error (mungkin tidak ada URL valid):", e));
+                };
+
+                // sendReq(dataP1);
+                // sendReq(dataP2);
+                console.log("Catatan: Fungsi fetch ke Google Script dikomentari untuk mencegah error. Ganti variabel GOOGLE_SCRIPT_URL dan aktifkan kode sendReq() di baris 330 untuk produksi.");
+
+            } catch (error) {
+                console.error('Error saat mengirim data:', error);
+            }
+        }
+
+    </script>
+</body>
+</html>
